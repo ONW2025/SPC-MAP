@@ -33,7 +33,7 @@
     var ohioBounds = L.latLngBounds(southWest, northEast);
     map.setMaxBounds(ohioBounds);
     map.on('drag', function() {
-      map.panInsideBounds(ohioBounds, { animate: true });
+      map.panInsideBounds(ohioBounds, { animate: false });
     });
 
     // Minimal basemap that avoids roads and labels
@@ -50,9 +50,9 @@
           style: function(feature) {
             return {
               color: '#000000',  // White outline
-              weight: 12,         // Thicker outline than the colored stroke
+              weight: 4,         // Thicker outline than the colored stroke
               opacity: 1,
-              fill: true
+              fill: false
             };
           }
         }).addTo(map);
@@ -62,9 +62,9 @@
           style: function(feature) {
             return {
               color: '#000000',  // Red border for high contrast
-              weight: 12,         // Increase stroke weight for better visibility
+              weight: 4,         // Increase stroke weight for better visibility
               opacity: 1,
-              fill: true
+              fill: false
             };
           },
           onEachFeature: function(feature, layer) {
