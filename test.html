@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Enhanced Ohio County Lines</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <style>
+    #map { 
+      height: 100vh; 
+      width: 100%; 
+    }
+    /* Ensure vector strokes don't scale with zoom */
+    .leaflet-zoom-animated path {
+      vector-effect: non-scaling-stroke;
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script>
+    // Center on Ohio
+    var ohioCenter = [40.0, -82.0];
+    var map = L.map('map', {
+      maxZoom: 10,
+      minZoom: 6
+    }).setView(ohioCenter, 7);
+
+    // Define approximate bounding box for Ohio
+    var southWest = L.latLng(38.4, -84.8);
+    var northEast = L.latLng(41.98, -80.52);
+    var ohioBounds = L.latLngBounds(southWest, northEast);
+    map.setMaxBounds(ohioBounds);
+    map.on('drag', function() {
+      map.panInsideBounds(ohioBounds, { animate: true });
+    });
+
+    // Minimal basemap that avoids roads and labels
+    var minimalTiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    // Load and display Ohio county boundaries from a GeoJSON file
+    fetch('ohio_counties.geojson')
+      .then(response => response.json())
+      .then(data => {
+        // Optional: add a white outline layer for a halo effect
+        L.geoJSON(data, {
+          style: function(feature) {
+            return {
+              color: '#000000',  // White outline
+              weight: 12,         // Thicker outline than the colored stroke
+              opacity: 1,
+              fill: true
+            };
+          }
+        }).addTo(map);
+
+        // Add the main county lines on top of the white outline
+        L.geoJSON(data, {
+          style: function(feature) {
+            return {
+              color: '#000000',  // Red border for high contrast
+              weight: 12,         // Increase stroke weight for better visibility
+              opacity: 1,
+              fill: true
+            };
+          },
+          onEachFeature: function(feature, layer) {
+            if (feature.properties && feature.properties.NAME) {
+              layer.bindPopup(feature.properties.NAME);
+            }
+          }
+        }).addTo(map);
+      })
+      .catch(error => console.error('Error loading GeoJSON:', error));
+  </script>
+</body>
+</html>
