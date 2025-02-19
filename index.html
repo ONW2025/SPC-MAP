@@ -2,14 +2,14 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>Enhanced Ohio County Lines</title>
+  <title>Ohio Counties & SPC Outlook on Leaflet</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <style>
     #map { 
       height: 100vh; 
       width: 100%; 
     }
-    /* Ensure vector strokes don't scale with zoom */
+    /* Keep vector strokes consistent at all zoom levels */
     .leaflet-zoom-animated path {
       vector-effect: non-scaling-stroke;
     }
@@ -20,14 +20,13 @@
   
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script>
-    // Center on Ohio
+    // ---------------------
+    // Map Initialization
+    // ---------------------
     var ohioCenter = [40.0, -82.0];
-    var map = L.map('map', {
-      maxZoom: 8,
-      minZoom: 8
-    }).setView(ohioCenter, 7);
+    var map = L.map('map', { minZoom: 6, maxZoom: 10 }).setView(ohioCenter, 7);
 
-    // Define approximate bounding box for Ohio
+    // Restrict the map to an approximate bounding box for Ohio
     var southWest = L.latLng(38.4, -84.8);
     var northEast = L.latLng(41.98, -80.52);
     var ohioBounds = L.latLngBounds(southWest, northEast);
@@ -36,35 +35,25 @@
       map.panInsideBounds(ohioBounds, { animate: false });
     });
 
-    // Minimal basemap that avoids roads and labels
-    var minimalTiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; OpenStreetMap contributors'
+    // Add a minimal basemap (without labels/roads)
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
     }).addTo(map);
 
-    // Load and display Ohio county boundaries from a GeoJSON file
+    // ---------------------
+    // Ohio Counties Layer
+    // ---------------------
+    // Make sure "ohio_counties.geojson" is hosted and accessible from your project.
     fetch('ohio_counties.geojson')
       .then(response => response.json())
       .then(data => {
-        // Optional: add a white outline layer for a halo effect
         L.geoJSON(data, {
           style: function(feature) {
             return {
-              color: '#000000',  // White outline
-              weight: 1,         // Thicker outline than the colored stroke
+              color: '#FF0000',   // Red borders for counties
+              weight: 4,          // Thicker line for better visibility
               opacity: 1,
-              fill: false
-            };
-          }
-        }).addTo(map);
-
-        // Add the main county lines on top of the white outline
-        L.geoJSON(data, {
-          style: function(feature) {
-            return {
-              color: '#000000',  // Red border for high contrast
-              weight: 4,         // Increase stroke weight for better visibility
-              opacity: 1,
-              fill: false
+              fill: false        // No fill color
             };
           },
           onEachFeature: function(feature, layer) {
@@ -74,7 +63,94 @@
           }
         }).addTo(map);
       })
-      .catch(error => console.error('Error loading GeoJSON:', error));
+      .catch(error => console.error('Error loading Ohio counties GeoJSON:', error));
+
+    // ---------------------
+    // SPC Convective Outlook Placefile Parsing & Layer
+    // ---------------------
+    /**
+     * A simple parser for an SPC convective outlook placefile.
+     * This example assumes the placefile defines polygons using:
+     * 
+     * polygon
+     *   lat, lon
+     *   lat, lon
+     *   ... (more coordinate lines)
+     * endpolygon
+     *
+     * Adjust this parser to match the actual format of your SPC placefile.
+     */
+    function parsePlacefile(text) {
+      const lines = text.split('\n');
+      const features = [];
+      let inPolygon = false;
+      let polygonCoords = [];
+
+      lines.forEach(line => {
+        line = line.trim();
+        if (!line) return; // Skip empty lines
+
+        if (line.toLowerCase().startsWith('polygon')) {
+          inPolygon = true;
+          polygonCoords = [];
+        } else if (line.toLowerCase().startsWith('endpolygon')) {
+          if (polygonCoords.length > 0) {
+            features.push({
+              type: 'Feature',
+              geometry: {
+                type: 'Polygon',
+                coordinates: [polygonCoords] // GeoJSON expects [ [lon, lat], [lon, lat], ... ]
+              },
+              properties: {} // Add any properties if desired
+            });
+          }
+          inPolygon = false;
+        } else if (inPolygon) {
+          // Assume each line is a coordinate pair in "lat, lon" format
+          const parts = line.split(',');
+          if (parts.length >= 2) {
+            const lat = parseFloat(parts[0]);
+            const lon = parseFloat(parts[1]);
+            if (!isNaN(lat) && !isNaN(lon)) {
+              // GeoJSON format: [lon, lat]
+              polygonCoords.push([lon, lat]);
+            }
+          }
+        }
+      });
+
+      return {
+        type: 'FeatureCollection',
+        features: features
+      };
+    }
+
+    // Replace this URL with the actual URL where your SPC placefile is hosted.
+    // For example, if hosted on GitHub Pages, it might be:
+    // 'https://yourusername.github.io/your-repo-name/spc_placefile.txt'
+    const spcPlacefileUrl = 'https://www.spc.noaa.gov/products/outlook/day1otlk_cat.nolyr.geojson';
+
+    fetch(spcPlacefileUrl)
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Network response was not OK');
+        }
+        return response.text();
+      })
+      .then(text => {
+        const spcGeojson = parsePlacefile(text);
+        L.geoJSON(spcGeojson, {
+          style: {
+            color: '#0000FF',   // Blue lines for SPC outlook features
+            weight: 3,
+            opacity: 1,
+            fillOpacity: 0.2
+          }
+        }).addTo(map);
+      })
+      .catch(error => {
+        console.error('Error fetching or parsing the SPC placefile:', error);
+      });
   </script>
 </body>
 </html>
