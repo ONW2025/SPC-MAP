@@ -24,7 +24,7 @@
     // Map Initialization
     // ---------------------
     var ohioCenter = [40.0, -82.0];
-    var map = L.map('map', { minZoom: 6, maxZoom: 10 }).setView(ohioCenter, 7);
+    var map = L.map('map', { minZoom: 8, maxZoom: 8 }).setView(ohioCenter, 7);
 
     // Restrict the map to an approximate bounding box for Ohio
     var southWest = L.latLng(38.4, -84.8);
@@ -51,7 +51,7 @@
           style: function(feature) {
             return {
               color: '#000000',   // Red borders for counties
-              weight: 4,          // Thicker line for better visibility
+              weight: 2,          // Thicker line for better visibility
               opacity: 1,
               fill: false        // No fill color
             };
